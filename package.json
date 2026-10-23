@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/auctions_contracts",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "type": "module",
   "main": "dist/unified/src/unified/index.js",
   "types": "dist/unified/src/unified/index.d.ts",
@@ -199,6 +199,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/johnqh/auctions_contracts.git"
+    "url": "https://github.com/Sudobility/auctions_contracts.git"
   }
 }
