@@ -3,7 +3,8 @@
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
     "outDir": "dist/evm",
-    "module": "commonjs"
+    "module": "commonjs",
+    "rootDir": "."
   },
   "include": [
     "src/evm/**/*",

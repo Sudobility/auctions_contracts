@@ -8,7 +8,8 @@
     "ignoreDeprecations": "6.0",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "jsx": "react"
+    "jsx": "react",
+    "rootDir": "."
   },
   "include": [
     "src/unified/**/*",
