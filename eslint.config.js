@@ -53,6 +53,8 @@ export default [
       prettier: prettier,
     },
     rules: {
+      'preserve-caught-error': 'off',
+      'no-useless-assignment': 'off',
       // Disable base rule and enable TypeScript version
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
