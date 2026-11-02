@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/auctions_contracts",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "type": "module",
   "main": "dist/unified/src/unified/index.js",
   "types": "dist/unified/src/unified/index.d.ts",
@@ -83,7 +83,7 @@
     }
   },
   "scripts": {
-    "build": "bun run build:evm && bun run build:solana && bun run build:unified && bun run build:react-native",
+    "build": "bun run build:evm && bun run build:solana && bun run build:unified && bun run build:react-native && node scripts/fix-esm-imports.mjs",
     "build:ci": "bun run build:unified && bun run build:react-native",
     "build:evm": "npx hardhat compile && tsc --project tsconfig.evm.json",
     "build:solana": "cargo build --manifest-path programs/auctions/Cargo.toml && tsc --project tsconfig.solana.json",
