@@ -9,12 +9,13 @@ This file provides context for Claude Code when working on this project.
 
 ## Project Overview
 
-Multi-chain auction system supporting Solana (Rust/Anchor) and EVM (Solidity/Hardhat). Implements three auction types: Traditional, Dutch, and Penny.
+Multi-chain auction system supporting Solana (native Rust) and EVM (Solidity/Hardhat). Implements three auction types: Traditional, Dutch, and Penny. The published TypeScript SDK is the primary consumer artifact.
 
-- **Package**: `@sudobility/auctions_contracts`
-- **Stack**: Solidity 0.8.24, Rust/Anchor 0.28.0 (edition 2021), TypeScript, Hardhat, Viem
+- **Package**: `@sudobility/auctions_contracts` (published to npmjs.org; see package.json `publishConfig`)
+- **Stack**: Solidity 0.8.24 (Hardhat + viem), native Solana `solana-program` 1.18 (Rust edition 2021 — **not** the Anchor framework), TypeScript 6
 - **License**: BUSL-1.1
-- **Package manager**: Bun
+- **Package manager**: Bun. Node >=20, npm >=10 (engines)
+- **Solana note**: the on-chain program is a native program (`entrypoint!`/`declare_id!` + manual processor). Anchor CLI 0.28.0 (Anchor.toml) is used only for `compile:solana`/`deploy:solana:*`; the real build is `cargo build` and tests are `cargo test`.
 
 ## Quick Commands
 
@@ -22,9 +23,8 @@ Multi-chain auction system supporting Solana (Rust/Anchor) and EVM (Solidity/Har
 bun run build              # Build everything (EVM + Solana + Unified + React Native)
 bun run build:ci           # Build unified + react-native only (no EVM/Solana compile)
 bun run compile:evm        # Compile Solidity contracts only
-bun run test               # Run EVM tests (alias for test:evm)
-bun run test:evm           # Run EVM tests (Hardhat + viem)
-bun run test:solana        # Run Solana tests (cargo test)
+bun run test:evm           # Run EVM tests (Hardhat + viem); aliases: test:unit, test:run
+bun run test:solana        # Run Solana tests (cargo test) — needs Rust/cargo toolchain
 bun run test:ci            # Build unified then run unified tests directly
 bun run test:unified       # Run unified tests from dist (must build first)
 bun run lint               # ESLint check
@@ -51,7 +51,7 @@ auctions_contracts/
 │   │   ├── FeeLib.sol                # Fee calculation (0.5% default, 10% max)
 │   │   └── TokenTransferLib.sol      # ERC20/721/1155 transfer utilities
 │   └── test/mocks/                   # Mock tokens for testing
-├── programs/auctions/src/        # Solana program (Rust/Anchor)
+├── programs/auctions/src/        # Solana program (native Rust, solana-program)
 │   ├── lib.rs                        # Entrypoint
 │   ├── state.rs                      # State definitions & enums
 │   ├── instruction.rs                # Instruction definitions
@@ -61,10 +61,10 @@ auctions_contracts/
 │   ├── unified/                      # Chain-agnostic client (lazy-loads EVM/Solana)
 │   ├── evm/                          # Viem-based EVM client
 │   ├── solana/                       # Web3.js-based Solana client
-│   ├── react-native/                 # React Native entry (directory does not exist yet)
-│   ├── types/common.ts               # Shared types, validators, & utility functions
-│   └── utils/
-├── test/                         # Test suites
+│   ├── index.ts                      # Default entry (re-exports unified)
+│   └── types/common.ts               # Shared types, validators, & utility functions
+│   # (src/react-native/ and src/utils/ are referenced by config but do NOT exist — see Gotchas)
+├── test/                         # evm/ (Hardhat) + unified/ (mocha) suites
 ├── typechain-types/              # Generated types from Solidity
 ├── hardhat.config.cts            # Hardhat configuration
 ├── Anchor.toml                   # Anchor configuration
@@ -77,26 +77,11 @@ auctions_contracts/
 └── tsconfig.test.json            # Test build config
 ```
 
-## Auction Types
+## Auction Types (see README for full behavior)
 
-### Traditional Auction
-
-- English-style ascending bids with reserve price
-- Minimum increment enforced
-- If reserve met: auto-finalize after deadline
-- If reserve not met: 24-hour acceptance period for dealer
-
-### Dutch Auction
-
-- Descending price: `price = start_price - (intervals * decrease_amount)`
-- Price floors at minimum_price
-- First buyer wins immediately
-
-### Penny Auction
-
-- Fixed bid increment (pay-to-bid model)
-- Each bid resets a 5-minute timer
-- Last bidder when timer expires wins all items
+- **Traditional**: ascending bids + reserve + min increment; reserve met → auto-finalize after deadline, else 24h dealer acceptance period.
+- **Dutch**: `price = start_price - (intervals * decrease_amount)`, floored at `minimum_price`; first buyer wins.
+- **Penny**: fixed pay-to-bid increment; each bid resets a 5-minute timer; last bidder at expiry wins all items.
 
 ## Key Constants
 
@@ -193,11 +178,21 @@ Uses `johnqh/workflows/.github/workflows/unified-cicd.yml@main` reusable workflo
 
 ## Dependencies
 
-- `@openzeppelin/contracts` 5.4.0 (EVM standards)
-- `viem` 2.38.4 (EVM interactions)
-- `@solana/web3.js` 1.98.4 (Solana interactions)
-- `hardhat` 2.26.3 (build/test)
-- `mocha` + `chai` (testing)
+(dev/peer versions change — check package.json, these are the majors)
+
+- `@openzeppelin/contracts` + `-upgradeable` 5.x (EVM standards)
+- `viem` 2.x (EVM interactions; peer `>=2.0.0`)
+- `@solana/web3.js` 1.x (Solana interactions; peer `>=1.95.0`)
+- `hardhat` 2.x (build/test)
+- `mocha` + `chai` (unified-test runner)
+
+## Gotchas
+
+- **No top-level `test` script.** Use `test:evm` (or `test:unit`/`test:run`), `test:solana`, `test:ci`.
+- **Two ESLint flat configs exist.** `eslint.config.js` (with prettier plugin) is the active one — ESLint resolves `.js` before `.mjs`, so `eslint.config.mjs` is stale/dead; edit `eslint.config.js`.
+- **`react-native` package export is dangling** — no `src/react-native/`, so `build:react-native` emits no RN entry; the export points at a file that isn't produced.
+- **Full `build` requires the Rust/Solana toolchain** (`build:solana` runs `cargo build`). Use `build:ci` (unified + react-native, TS only) when the toolchain is absent.
+- **`@sudobility` scope resolves to GitHub Packages** (`.npmrc`), so `bun install` of those deps needs GH auth, even though this package itself publishes to npmjs.org.
 
 ## Git Workflow
 
